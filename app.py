@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, session, redirect, url_for
+from flask import Flask, render_template, request, session, redirect, url_for, jsonify
 import random
 
 app = Flask(__name__)
@@ -9,6 +9,8 @@ def setup_game():
     session['history'] = []
     session['tries'] = 6
     session['won'] = False
+    session['current_row'] = 0
+    session.modified = True
 
 def get_feedback(user_input, answer):
     feedback = []
@@ -104,10 +106,50 @@ def calculate_luck(history, answer):
 
     return min(int(luck), 100)
 
+@app.route('/api/guess', methods=['POST'])
+def api_guess():
+    try:
+        # Ensure game is initialized
+        if 'answer' not in session:
+            setup_game()
+        
+        if session['tries'] <= 0 or session['won']:
+            return jsonify({'success': False, 'message': 'Game over'}), 400
+
+        user_input_str = request.json.get('guess', '')
+        
+        if not user_input_str or len(user_input_str) != 5 or not user_input_str.isdigit():
+            return jsonify({'success': False, 'message': 'Invalid input'}), 400
+
+        user_input = [int(d) for d in user_input_str]
+        feedback = get_feedback(user_input, session['answer'])
+        session['history'].append((user_input, feedback))
+        session['tries'] -= 1
+
+        if user_input == session['answer']:
+            session['won'] = True
+
+        session.modified = True
+        
+        return jsonify({
+            'success': True,
+            'feedback': feedback,
+            'remaining_tries': session['tries'],
+            'won': session['won']
+        })
+    except Exception as e:
+        print(f"ERROR in api_guess: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @app.route('/')
 def index():
-    if 'answer' not in session:
+    # Reset game if it's already over, or initialize if not started
+    if 'answer' not in session or session.get('won') or session.get('tries', 6) <= 0:
         setup_game()
+    
+    session.modified = True
     answer_str = ''.join(map(str, session['answer']))
     return render_template('index.html', history=session['history'], tries=session['tries'], won=session['won'], answer_str=answer_str)
 
@@ -141,17 +183,20 @@ def analyze():
     luck = calculate_luck(session['history'], session['answer'])
     answer_str = ''.join(map(str, session['answer']))
 
-    # Calculate errors for each turn
+    # Calculate errors and feedback for each turn
     errors = []
+    optimal_feedback = []
     for i in range(len(session['history'])):
         if i < len(optimal):
             user_error = sum(abs(session['history'][i][0][j] - session['answer'][j]) for j in range(5))
             optimal_error = sum(abs(optimal[i][j] - session['answer'][j]) for j in range(5))
             errors.append((user_error, optimal_error))
+            optimal_feedback.append(get_feedback(optimal[i], session['answer']))
         else:
             errors.append(None)
+            optimal_feedback.append(None)
 
-    return render_template('analyze.html', history=session['history'], optimal=optimal, skill=skill, luck=luck, answer=session['answer'], answer_str=answer_str, errors=errors)
+    return render_template('analyze.html', history=session['history'], optimal=optimal, optimal_feedback=optimal_feedback, skill=skill, luck=luck, answer=session['answer'], answer_str=answer_str, errors=errors)
 
 @app.route('/new_game')
 def new_game():
