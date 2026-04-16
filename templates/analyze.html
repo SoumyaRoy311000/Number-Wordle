@@ -3,45 +3,234 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Analysis</title>
+    <title>Game Analysis - Number Wordle</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .analysis-container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .section {
+            margin: 30px 0;
+        }
+
+        .section h2 {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: var(--tile-bg);
+            border-radius: 8px;
+        }
+
+        .comparison-item h4 {
+            margin: 0 0 10px 0;
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .tiles-row {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 4px;
+            margin-bottom: 10px;
+        }
+
+        .comparison-tile {
+            width: 100%;
+            padding-top: 100%;
+            position: relative;
+            border-radius: 4px;
+            border: 2px solid var(--border-color);
+        }
+
+        .comparison-tile-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 16px;
+        }
+
+        .comparison-tile.green { border-color: transparent; }
+        .comparison-tile.green .comparison-tile-content { background-color: #4CAF50; }
+
+        .comparison-tile.yellow { border-color: transparent; }
+        .comparison-tile.yellow .comparison-tile-content { background-color: #FFEB3B; color: #333; }
+
+        .comparison-tile.orange { border-color: transparent; }
+        .comparison-tile.orange .comparison-tile-content { background-color: #FF9800; }
+
+        .comparison-tile.red { border-color: transparent; }
+        .comparison-tile.red .comparison-tile-content { background-color: #f44336; }
+
+        .ratings {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            text-align: center;
+        }
+
+        .rating-box {
+            padding: 20px;
+            background-color: var(--tile-bg);
+            border-radius: 8px;
+            border: 2px solid var(--border-color);
+        }
+
+        .rating-box h3 {
+            margin: 0 0 10px 0;
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .rating-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        .footer-links {
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .footer-links a {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: var(--button-bg);
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin: 0 5px;
+            transition: background-color 0.3s;
+        }
+
+        .footer-links a:hover {
+            background-color: var(--button-hover);
+            text-decoration: none;
+        }
+
+        .turn-label {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+
+        .status-badge {
+            text-align: center;
+            margin-top: 8px;
+            font-size: 0.85em;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background-color: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+        }
+
+        .status-badge.suboptimal {
+            background-color: rgba(255, 152, 0, 0.2);
+            color: #FF9800;
+        }
+    </style>
 </head>
 <body>
-    <button id="theme-toggle">Toggle Dark Mode</button>
-    <h1>Game Analysis</h1>
+    <div class="analysis-container">
+        <header>
+            <h1>Game Analysis</h1>
+            <button id="theme-toggle">Toggle Dark Mode</button>
+        </header>
 
-    <h2>Optimal Solution Path</h2>
-    <ul>
-        {% for step in optimal %}
-            <li>Turn {{ loop.index }}: {{ step|join('') }}</li>
-        {% endfor %}
-    </ul>
+        <div class="section ratings">
+            <div class="rating-box">
+                <h3>Skill Score</h3>
+                <div class="rating-value">{{ skill }}</div>
+                <small>/100</small>
+            </div>
+            <div class="rating-box">
+                <h3>Luck Score</h3>
+                <div class="rating-value">{{ luck }}</div>
+                <small>/100</small>
+            </div>
+        </div>
 
-    <h2>Move-by-Move Comparison</h2>
-    {% for i in range(history|length) %}
-        {% if i < optimal|length %}
-            <h3>Turn {{ i+1 }}</h3>
-            <p>Your guess: {{ history[i][0]|join('') }}</p>
-            <p>Optimal guess: {{ optimal[i]|join('') }}</p>
-            {% if errors[i][0] <= errors[i][1] %}
-                <p>👍 Good move</p>
-            {% else %}
-                <p>⚠️ Suboptimal move</p>
-            {% endif %}
-        {% endif %}
-    {% endfor %}
+        <div class="section">
+            <h2>Your Guesses vs Optimal</h2>
+            {% for i in range(history|length) %}
+                {% if i < optimal|length %}
+                    <div class="comparison">
+                        <div>
+                            <h4>Your Guess (Turn {{ i+1 }})</h4>
+                            <div class="tiles-row">
+                                {% for j in range(5) %}
+                                    <div class="comparison-tile {{ history[i][1][j] }}">
+                                        <div class="comparison-tile-content">{{ history[i][0][j] }}</div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% if errors[i] %}
+                                <div class="status-badge {% if errors[i][0] > errors[i][1] %}suboptimal{% endif %}">
+                                    {% if errors[i][0] <= errors[i][1] %}
+                                        ✓ Good move
+                                    {% else %}
+                                        ⚠️ Suboptimal
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h4>Optimal Guess</h4>
+                            <div class="tiles-row">
+                                {% for j in range(5) %}
+                                    <div class="comparison-tile {{ optimal_feedback[i][j] }}">
+                                        <div class="comparison-tile-content">{{ optimal[i][j] }}</div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <div class="status-badge">Suggested</div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
 
-    <h2>Final Ratings</h2>
-    <p>Skill: {{ skill }}/100</p>
-    <p>Luck: {{ luck }}/100</p>
+        <div class="section">
+            <h2>Answer</h2>
+            <div style="text-align: center;">
+                <div class="tiles-row" style="max-width: 250px; margin: 0 auto;">
+                    {% for digit in answer %}
+                        <div class="comparison-tile green">
+                            <div class="comparison-tile-content">{{ digit }}</div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
 
-    <br>
-    <a href="{{ url_for('new_game') }}">New Game</a>
+        <div class="footer-links">
+            <a href="{{ url_for('new_game') }}">New Game</a>
+            <a href="{{ url_for('index') }}">Home</a>
+        </div>
+    </div>
+
     <script>
         const toggleButton = document.getElementById('theme-toggle');
         const body = document.body;
 
-        // Check for saved theme preference
         const currentTheme = localStorage.getItem('theme');
         if (currentTheme === 'dark') {
             body.classList.add('dark');
