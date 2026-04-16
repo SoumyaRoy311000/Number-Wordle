@@ -119,7 +119,6 @@ To modify the application:
 - Edit `app.py` for backend logic.
 - Modify templates in `templates/` for frontend changes.
 - Update `static/style.css` for styling.
-- The core game logic is preserved from the original script.
 
 ## License
 
