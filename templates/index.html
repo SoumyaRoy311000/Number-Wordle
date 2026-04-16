@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Number Wordle</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <button id="theme-toggle">Toggle Dark Mode</button>
+    <h1>Number Wordle</h1>
+    <p>Welcome to Number Wordle! You have 6 attempts to guess a 5-digit number.</p>
+    <p>Feedback:</p>
+    <ul>
+        <li><span class="green">Green</span>: Correct digit in the correct position</li>
+        <li><span class="yellow">Yellow</span>: Correct digit but in the wrong position (within 2)</li>
+        <li><span class="orange">Orange</span>: Digit is close (within 4)</li>
+        <li><span class="red">Red</span>: Digit is far (more than 4 away)</li>
+    </ul>
+
+    {% if won %}
+        <h2>Congratulations! You've guessed the number in {{ 6 - tries }} attempts.</h2>
+        <a href="{{ url_for('analyze') }}">Analyze Game</a>
+        <br><br>
+        <a href="{{ url_for('new_game') }}">New Game</a>
+    {% elif tries <= 0 %}
+        <h2>Game Over! The correct number was: {{ answer_str }}</h2>
+        <a href="{{ url_for('analyze') }}">Analyze Game</a>
+        <br><br>
+        <a href="{{ url_for('new_game') }}">New Game</a>
+    {% else %}
+        <p>You have {{ tries }} attempts left.</p>
+        <form action="{{ url_for('guess') }}" method="post">
+            <label for="guess">Enter a 5-digit number:</label>
+            <input type="text" id="guess" name="guess" maxlength="5" pattern="\d{5}" required>
+            <button type="submit">Guess</button>
+        </form>
+        <br>
+        <a href="{{ url_for('new_game') }}">New Game</a>
+    {% endif %}
+
+    <h3>History</h3>
+    <ul>
+        {% for guess, fb in history %}
+            <li>
+                {% for i in range(5) %}
+                    <span class="{{ fb[i] }}">{{ guess[i] }}</span>
+                {% endfor %}
+            </li>
+        {% endfor %}
+    </ul>
+    <script>
+        const toggleButton = document.getElementById('theme-toggle');
+        const body = document.body;
+
+        // Check for saved theme preference
+        const currentTheme = localStorage.getItem('theme');
+        if (currentTheme === 'dark') {
+            body.classList.add('dark');
+            toggleButton.textContent = 'Toggle Light Mode';
+        }
+
+        toggleButton.addEventListener('click', () => {
+            body.classList.toggle('dark');
+            const isDark = body.classList.contains('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            toggleButton.textContent = isDark ? 'Toggle Light Mode' : 'Toggle Dark Mode';
+        });
+    </script>
+</body>
+</html>

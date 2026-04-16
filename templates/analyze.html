@@ -1,1 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Analysis</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <button id="theme-toggle">Toggle Dark Mode</button>
+    <h1>Game Analysis</h1>
 
+    <h2>Optimal Solution Path</h2>
+    <ul>
+        {% for step in optimal %}
+            <li>Turn {{ loop.index }}: {{ step|join('') }}</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Move-by-Move Comparison</h2>
+    {% for i in range(history|length) %}
+        {% if i < optimal|length %}
+            <h3>Turn {{ i+1 }}</h3>
+            <p>Your guess: {{ history[i][0]|join('') }}</p>
+            <p>Optimal guess: {{ optimal[i]|join('') }}</p>
+            {% if errors[i][0] <= errors[i][1] %}
+                <p>👍 Good move</p>
+            {% else %}
+                <p>⚠️ Suboptimal move</p>
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+
+    <h2>Final Ratings</h2>
+    <p>Skill: {{ skill }}/100</p>
+    <p>Luck: {{ luck }}/100</p>
+
+    <br>
+    <a href="{{ url_for('new_game') }}">New Game</a>
+    <script>
+        const toggleButton = document.getElementById('theme-toggle');
+        const body = document.body;
+
+        // Check for saved theme preference
+        const currentTheme = localStorage.getItem('theme');
+        if (currentTheme === 'dark') {
+            body.classList.add('dark');
+            toggleButton.textContent = 'Toggle Light Mode';
+        }
+
+        toggleButton.addEventListener('click', () => {
+            body.classList.toggle('dark');
+            const isDark = body.classList.contains('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            toggleButton.textContent = isDark ? 'Toggle Light Mode' : 'Toggle Dark Mode';
+        });
+    </script>
+</body>
+</html>
